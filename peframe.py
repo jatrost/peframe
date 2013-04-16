@@ -42,6 +42,11 @@ import datetime
 import subprocess
 import hashlib
 import json
+import codecs
+import traceback
+
+sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
+sys.stderr = codecs.getwriter('UTF-8')(sys.stderr)
 
 pathname = os.path.abspath(os.path.dirname(sys.argv[0]))
 sys.path.append(pathname + '/modules')
@@ -73,10 +78,10 @@ def HASH():
 ## Print PE file attributes
 def INFO():
     return {
-        "name":os.path.basename(exename),
+        "name": os.path.basename(exename),
         "size": len(filebytes), 
         "compile_time": "%s"%datetime.datetime.fromtimestamp(pe.FILE_HEADER.TimeDateStamp),
-        "dll":pe.FILE_HEADER.IMAGE_FILE_DLL,
+        "dll": unicode(pe.FILE_HEADER.IMAGE_FILE_DLL),
         "sections":pe.FILE_HEADER.NumberOfSections
     }
 
@@ -128,7 +133,7 @@ def SECTIONS():
             suspicious = False
 
         sections.append({
-            'name': section.Name,
+            'name': unicode(section.Name.encode("string_escape")),
             'virt_address':hex(section.VirtualAddress),
             'virt_size':hex(section.Misc_VirtualSize),
             'raw_data_size':section.SizeOfRawData,
@@ -147,7 +152,10 @@ def SECTIONS():
 def PEID():
     signatures = peutils.SignatureDatabase(pathname + '/modules/userdb.txt')
     matches = signatures.match_all(pe,ep_only = True)
-    return {"packer": matches[0][0]}
+    if matches and len(matches) > 0 and len(matches[0]) > 0:
+        return {"packer": unicode(matches[0][0])}
+    else:
+        return {}
 
 ##############################################################
 ## Check for Anti VM
@@ -238,10 +246,13 @@ def DEBUG():
 ## Imports DLLs and API
 def FUNCTIONS():
     res = {}
-    for entry in pe.DIRECTORY_ENTRY_IMPORT:
-        res[entry.dll] = {}
-        for imp in entry.imports:
-            res[entry.dll][imp.address] = imp.name
+    try:
+        for entry in pe.DIRECTORY_ENTRY_IMPORT:
+            res[entry.dll] = {}
+            for imp in entry.imports:
+                res[entry.dll][imp.address] = imp.name
+    except:
+        pass
     return res
 
 ##############################################################
@@ -268,22 +279,30 @@ antidbgs = ['CheckRemoteDebuggerPresent', 'FindWindow', 'GetWindowThreadProcessI
 
 def APIALERT():
     suspicious_functions = []
-    for lib in pe.DIRECTORY_ENTRY_IMPORT:
-        for imp in lib.imports:
-            if (imp.name != None) and (imp.name != ""):
-                for alert in alerts:
-                    if imp.name.startswith(alert):
-                        suspicious_functions.append(imp.name)
+    try:
+        for lib in pe.DIRECTORY_ENTRY_IMPORT:
+            for imp in lib.imports:
+                if (imp.name != None) and (imp.name != ""):
+                    for alert in alerts:
+                        if imp.name.startswith(alert):
+                            suspicious_functions.append(imp.name)
+    except:
+        pass
+
     return suspicious_functions
 
 def APIANTIDBG():
     antidebugs = []
-    for lib in pe.DIRECTORY_ENTRY_IMPORT:
-        for imp in lib.imports:
-            if (imp.name != None) and (imp.name != ""):
-                for antidbg in antidbgs:
-                    if imp.name.startswith(antidbg):
-                            antidebugs.append(imp.name)
+    try:
+        for lib in pe.DIRECTORY_ENTRY_IMPORT:
+            for imp in lib.imports:
+                if (imp.name != None) and (imp.name != ""):
+                    for antidbg in antidbgs:
+                        if imp.name.startswith(antidbg):
+                                antidebugs.append(imp.name)
+    except:
+        pass
+
     return antidebugs
 
 def SUSPICIOUS():
@@ -311,9 +330,9 @@ try:
 	results['export'] = EXPORT()
 	results['resource'] = RESOURCE()
 	results['debug'] = DEBUG()
-
+except pefile.PEFormatError, pe_err:
+    results['error'] = unicode(pe_err) 
 except Exception, e:
-	import traceback
 	traceback.print_exc()
 
 print json.dumps(results)
