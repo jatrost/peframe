@@ -206,41 +206,74 @@ def URL(strings):
 
 ##############################################################
 ## Dump Entry instances
+
+#
+# Code taken from pefile and modified....
+#
+def dump(obj, indentation=0):
+    """Returns a string representation of the structure."""
+
+    dump = []
+    res = {'name':obj.name, 'objects':dump}
+    
+    # Refer to the __set_format__ method for an explanation
+    # of the following construct.
+    for keys in obj.__keys__:
+        for key in keys:
+            val = getattr(obj, key)
+            if isinstance(val, int) or isinstance(val, long):
+                val_str = '0x%X' % (val)
+                if key == 'TimeDateStamp' or key == 'dwTimeStamp':
+                    try:
+                        val_str = '%s UTC' % time.asctime(time.gmtime(val))
+                    except exceptions.ValueError, e:
+                        val_str = 'INVALID TIME'
+            else:
+                val_str = ''.join(filter(lambda c:c != '\0', str(val)))
+            
+            dump.append( {
+                key: val_str, 
+                'address': '0x%X'%(obj.__field_offsets__[key] + obj.__file_offset__),
+                'offset':  '0x%X'%(obj.__field_offsets__[key])
+            })
+
+    return res
+
 def IMPORT():
     try:
-        return unicode(pe.DIRECTORY_ENTRY_IMPORT[0].struct)
+        return dump(pe.DIRECTORY_ENTRY_IMPORT[0].struct)
     except:
         try:
-            return unicode(pe.DIRECTORY_ENTRY_IMPORT.struct)
+            return dump(pe.DIRECTORY_ENTRY_IMPORT.struct)
         except:
-            return "none"
+            return {}
 
 def EXPORT():
     try:
-        return unicode(pe.DIRECTORY_ENTRY_EXPORT[0].struct)
+        return dump(pe.DIRECTORY_ENTRY_EXPORT[0].struct)
     except:
         try:
-            return unicode(pe.DIRECTORY_ENTRY_EXPORT.struct)
+            return dump(pe.DIRECTORY_ENTRY_EXPORT.struct)
         except:
-            return "none"
+            return {}
 
 def RESOURCE():
     try:
-        return unicode(pe.DIRECTORY_ENTRY_RESOURCE[0].struct)
+        return dump(pe.DIRECTORY_ENTRY_RESOURCE[0].struct)
     except:
         try:
-            return unicode(pe.DIRECTORY_ENTRY_RESOURCE.struct)
+            return dump(pe.DIRECTORY_ENTRY_RESOURCE.struct)
         except:
-            return "none"
+            return {}
 
 def DEBUG():
     try:
-        return unicode(pe.DIRECTORY_ENTRY_DEBUG[0].struct)
+        return dump(pe.DIRECTORY_ENTRY_DEBUG[0].struct)
     except:
         try:
-            return unicode(pe.DIRECTORY_ENTRY_DEBUG.struct)
+            return dump(pe.DIRECTORY_ENTRY_DEBUG.struct)
         except:
-            return "none"
+            return {}
 
 ##############################################################
 ## Imports DLLs and API
