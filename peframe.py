@@ -89,18 +89,20 @@ def INFO():
 ## Check for version info & metadata
 def META():
     # TODO: should this be a dict instead?
-    res = []    
+    res = {}   
     if hasattr(pe, 'VS_VERSIONINFO'):
         if hasattr(pe, 'FileInfo'):
             for entry in pe.FileInfo:
                 if hasattr(entry, 'StringTable'):
                     for st_entry in entry.StringTable:
                         for str_entry in st_entry.entries.items():
-                            res.append([str_entry[0], str_entry[1]])
+                            if str_entry[1]:
+                                res[str_entry[0]] = str_entry[1]
                 elif hasattr(entry, 'Var'):
                     for var_entry in entry.Var:
                         if hasattr(var_entry, 'entry'):
-                            res.append( [var_entry.entry.keys()[0], var_entry.entry.values()[0]] )
+                            if var_entry.entry.values()[0]:
+                                res[var_entry.entry.keys()[0]] = var_entry.entry.values()[0]
     return res
 
 ##############################################################
@@ -346,6 +348,7 @@ def SUSPICIOUS():
 
 results = {}
 exename = sys.argv[1]
+results['filename'] = os.path.basename(exename)
 filebytes = open(exename, 'rb').read()
 
 try:
