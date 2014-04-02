@@ -1,0 +1,2 @@
+pydeep==0.2
+hashlib==20081119
