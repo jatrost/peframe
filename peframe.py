@@ -44,6 +44,7 @@ import hashlib
 import json
 import codecs
 import traceback
+import pydeep
 
 sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
 sys.stderr = codecs.getwriter('UTF-8')(sys.stderr)
@@ -71,7 +72,10 @@ SPONSOR="http://www.securityside.it"
 def HASH():
     return {
         "md5": hashlib.md5(filebytes).hexdigest(),
-        "sha1": hashlib.sha1(filebytes).hexdigest()
+        "sha1": hashlib.sha1(filebytes).hexdigest(),
+        "sha256": hashlib.sha256(filebytes).hexdigest(),
+        "sha512": hashlib.sha512(filebytes).hexdigest(),
+        "ssdeep": pydeep.hash_bytes(filebytes)
     }
 
 ##############################################################
